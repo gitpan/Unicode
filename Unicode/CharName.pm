@@ -1,8 +1,11 @@
 package Unicode::CharName;
 
+# Copyright (c) 1997, Gisle Aas.
+
 require Exporter;
 @ISA=qw(Exporter);
 @EXPORT_OK = qw(uname ublock);
+$VERSION = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
 
 use strict;
 use vars qw(%JAMO_SHORT_NAME %NAMES @BLOCKS);
@@ -30,9 +33,9 @@ sub uname {
 	    pop(@s) if $t == 0x11A7;
 	    @s = map {
 		$_ = sprintf("%04X", $_);
-		$JAMO_SHORT_NAME{$_} || "U+$_";
+		$JAMO_SHORT_NAME{$_} || " U+$_ ";
             } @s;
-	    return "HANGUL SYLLABLE @s";
+	    return join("", "HANGUL SYLLABLE ", @s)
 	} elsif ($code > 0xFFFF) {
 	    return undef;  # outside Unicode range
 	}

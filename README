@@ -21,11 +21,6 @@ Some of my plans for the Unicode modules are:
 
    - Composition/decomposition support
 
-   - Various string operations on Unicode strings.
-
-   - ord/chr functions that know about surrugates.  I.e. chr() might
-     return a string of 1 or 2 unicode chars.
-
    - Case convertions (lc, uc, ucfirst)  last one should use title-case
    
    - Fast lookup of Unicode attributes (unidata lookup using XS)
@@ -36,12 +31,13 @@ Some of my plans for the Unicode modules are:
 
 The following are examples of use:
 
-   use Unicode::String qw(latin1);
+   use Unicode::String qw(latin1 utf8);
 
-   $u = Unicode::String::utf8("this is a string\n");
+   $u = utf8("this is a string\n");
    print $u->utf16;
-   print $u->latin1;
    print $u->utf8;
+   print $u->latin1;
+   print $u->hex;
 
    print latin1("naïve\n")->utf8;
 
