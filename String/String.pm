@@ -1,9 +1,21 @@
-package Unicode;
-use Carp;
+package Unicode::String;
 
 # Copyright (c) 1997, Gisle Aas.
 
-$VERSION = sprintf("%d.%02d", q$Revision: 1.1 $ =~ /(\d+)\.(\d+)/);
+use strict;
+use vars qw($VERSION @ISA @EXPORT_OK);
+use Carp;
+
+require Exporter;
+require DynaLoader;
+@ISA = qw(Exporter DynaLoader);
+
+@EXPORT_OK = qw(utf8 latin1);
+
+$VERSION = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
+
+bootstrap Unicode::String $VERSION;
+
 
 sub new
 {
@@ -13,11 +25,15 @@ sub new
     bless \$str, $class;
 }
 
-sub ucs2
+
+sub utf16
 {
     my $self = shift;
     $$self;
 }
+
+*ucs2 = \&utf16;
+
 
 sub ucs4
 {
@@ -25,12 +41,13 @@ sub ucs4
     pack("N*", unpack("n*", $$self));
 }
 
+
 sub utf8
 {
     my $self = shift;
     unless (ref $self) {
 	# act as ctor
-	my $u = new Unicode;
+	my $u = new Unicode::String;
 	$u->utf8($self);
 	return $u;
     }
@@ -38,6 +55,7 @@ sub utf8
     my $old;
     if (defined $$self) {
 	# encode UTF-8
+	my $uc;
 	for $uc (unpack("n*", $$self)) {
 	    if ($uc < 0x80) {
 		# 1 byte representation
@@ -83,12 +101,13 @@ sub utf8
     $old;
 }
 
-sub latin1
+
+sub latin1_old   # implemented as XS now
 {
     my $self = shift;
     unless (ref $self) {
 	# act as ctor
-	my $u = new Unicode;
+	my $u = new Unicode::String;
 	$u->latin1($self);
 	return $u;
     }
@@ -108,6 +127,7 @@ sub latin1
     $old;
 }
 
+
 sub hex
 {
     my $self = shift;
@@ -117,26 +137,29 @@ sub hex
     $str;
 }
 
+
 sub length
 {
     my $self = shift;
     length($$self) / 2;
 }
 
-sub chr
+
+sub ord
 {
     my $self = shift;
     return undef unless defined $$self;
     unpack("n", $$self);
 }
 
-sub ord
+
+sub chr
 {
     my($self,$val) = @_;
     unless (ref $self) {
 	# act as ctor
-	my $u = new Unicode;
-	$u->ord($self);
+	my $u = new Unicode::String;
+	$u->chr($self);
 	return $u;
     }
     $$self = pack("n", $val);

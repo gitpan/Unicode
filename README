@@ -1,14 +1,53 @@
-The Unicode module makes it easier to handle Unicode strings (UCS-2)
-in a perl program.  The following is examples of use:
+These are experimental modules to handle various Unicode issues.  This
+is software under construction.  Not even alpha state right now.
 
-   use Unicode;
+More information on Unicode can be found at http://www.unicode.org
 
-   $u = Unicode::utf8("this is a string");
-   print $u->ucs2;
+Current modules are:
+
+  Unicode::String   - represent strings of Unicode chars.
+  Unicode::CharName - look up character names
+
+
+Some of my plans for the Unicode modules are:
+
+   - Internal representation should be 2-byte-big-endian in normal
+     perl strings.  Blessed scalars as 'Unicode::String'.
+
+   - Unicode version 2.0 based.
+
+   - Fast XS implementation of Unicode encodings (UTF-7/UTF-8/UTF-16/UCS4)
+     Fast encoding/decoding to 8-bit char sets.
+
+   - Composition/decomposition support
+
+   - Various string operations on Unicode strings.
+
+   - ord/chr functions that know about surrugates.  I.e. chr() might
+     return a string of 1 or 2 unicode chars.
+
+   - Case convertions (lc, uc, ucfirst)  last one should use title-case
+   
+   - Fast lookup of Unicode attributes (unidata lookup using XS)
+
+   - Unicode filehandles (automatic convertion from UTF-7/UTF-8/8-bit 
+     char set when reading,writing to filehandles)
+
+
+The following are examples of use:
+
+   use Unicode::String qw(latin1);
+
+   $u = Unicode::String::utf8("this is a string\n");
+   print $u->utf16;
    print $u->latin1;
    print $u->utf8;
 
-   print Unicode::latin1("naïve\n")->utf8;
+   print latin1("naïve\n")->utf8;
+
+   use Unicode::CharName qw(uname);
+   print uname(ord('$')), "\n";
+
 
 
 COPYRIGHT

@@ -1,7 +1,8 @@
 print "1..4\n";
 
-use Unicode;
-$u = Unicode::latin1("abcזרו");
+use Unicode::String;
+
+$u = Unicode::String::latin1("abcזרו");
 
 print "not " unless $u->latin1 eq "abcזרו";
 print "ok 1\n";

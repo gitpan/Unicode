@@ -1,6 +1,8 @@
 MANIFEST
 Makefile.PL
-Unicode.pm
-t/unicode.t
-rfc2044.txt
 README
+String/Makefile.PL
+String/String.pm
+String/String.xs
+Unicode/CharName.pm
+t/unicode.t
