@@ -1,0 +1,6 @@
+MANIFEST
+Makefile.PL
+Unicode.pm
+t/unicode.t
+rfc2044.txt
+README

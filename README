@@ -1,0 +1,19 @@
+The Unicode module makes it easier to handle Unicode strings (UCS-2)
+in a perl program.  The following is examples of use:
+
+   use Unicode;
+
+   $u = Unicode::utf8("this is a string");
+   print $u->ucs2;
+   print $u->latin1;
+   print $u->utf8;
+
+   print Unicode::latin1("naïve\n")->utf8;
+
+
+COPYRIGHT
+
+  © 1997 Gisle Aas. All rights reserved.
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
