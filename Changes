@@ -1,0 +1,12 @@
+1997-07-10   Gisle Aas <aas@sn.no>
+
+   Release 19970710
+
+   Now most basic conversion routines and string manipulation works.
+   Documentation is starting to appear.
+
+
+
+1997-02-11   Gisle Aas <aas@sn.no>
+
+   First version of this module posted to perl5-porters.

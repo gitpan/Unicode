@@ -3,7 +3,7 @@ package Unicode::String;
 # Copyright (c) 1997, Gisle Aas.
 
 use strict;
-use vars qw($VERSION @ISA @EXPORT_OK);
+use vars qw($VERSION @ISA @EXPORT_OK $UTF7_OPTIONAL_DIRECT_CHARS);
 use Carp;
 
 require Exporter;
@@ -12,7 +12,9 @@ require DynaLoader;
 
 @EXPORT_OK = qw(utf16 utf8 utf7 ucs2 ucs4 latin1 uchr);
 
-$VERSION = sprintf("%d.%02d", q$Revision: 1.9 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q$Revision: 1.15 $ =~ /(\d+)\.(\d+)/);
+
+$UTF7_OPTIONAL_DIRECT_CHARS ||= 1;
 
 bootstrap Unicode::String $VERSION;
 
@@ -141,10 +143,14 @@ sub stringify_as
     } else {
 	$class = "Unicode::String";
     }
-    my $as = shift;
-    croak("Don't know how to stringify as '$as'")
-        unless exists $stringify{$as};
-    $stringify_as = $stringify{$as};
+    my $old = $stringify_as;
+    if (@_) {
+	my $as = shift;
+	croak("Don't know how to stringify as '$as'")
+	    unless exists $stringify{$as};
+	$stringify_as = $stringify{$as};
+    }
+    $old;
 }
 
 
@@ -156,9 +162,13 @@ sub utf16
 	$u->utf16($self);
 	return $u;
     }
-    my $old = $$self;;
+    my $old = $$self;
     if (@_) {
 	$$self = shift;
+	if ($$self =~ /^\xFF\xFE/) {
+	    # the string needs byte swapping
+	    $$self = pack("n*", unpack("v*", $$self));
+	}
     }
     $old;
 }
@@ -196,7 +206,7 @@ sub utf8_inperl
     }
 
     my $old;
-    if (defined $$self) {
+    if (defined($$self) && defined wantarray) {
 	# encode UTF-8
 	my $uc;
 	for $uc (unpack("n*", $$self)) {
@@ -245,9 +255,79 @@ sub utf8_inperl
 }
 
 
-sub utf7
+sub utf7   # rfc1642
 {
-    die "NYI";
+    my $self = shift;
+    unless (ref $self) {
+	# act as ctor
+	my $u = new Unicode::String;
+	$u->utf7($self);
+	return $u;
+    }
+    my $old;
+    if (defined wantarray) {
+	# encode into $old
+	$old = "";
+	pos($$self) = 0;
+	my $len = length($$self);
+	while (pos($$self) < $len) {
+            if (($UTF7_OPTIONAL_DIRECT_CHARS &&
+		 $$self =~ /\G((?:\0[A-Za-z0-9\'\(\)\,\-\.\/\:\?\!\"\#\$\%\&\*\;\<\=\>\@\[\]\^\_\`\{\|\}\s])+)/gc)
+	        || $$self =~ /\G((?:\0[A-Za-z0-9\'\(\)\,\-\.\/\:\?\s])+)/gc)
+            {
+		#print "Plain ", utf16($1)->latin1, "\n";
+		$old .= utf16($1)->latin1;
+	    }
+            elsif (($UTF7_OPTIONAL_DIRECT_CHARS &&
+                    $$self =~ /\G((?:[^\0].|\0[^A-Za-z0-9\'\(\)\,\-\.\/\:\?\!\"\#\$\%\&\*\;\<\=\>\@\[\]\^\_\`\{\|\}\s])+)/gc)
+                   || $$self =~ /\G((?:[^\0].|\0[^A-Za-z0-9\'\(\)\,\-\.\/\:\?\s])+)/gc)
+            {
+		#print "Unplain ", utf16($1)->hex, "\n";
+		if ($1 eq "\0+") {
+		    $old .= "+-";
+		} else {
+		    require MIME::Base64;
+		    my $base64 = MIME::Base64::encode($1, '');
+		    $base64 =~ s/=+$//;
+		    $old .= "+$base64-";
+		    # XXX should we determine when the final "-" is
+		    # unnecessary? depends on next char not being part
+		    # of the base64 char set.
+		}
+	    } else {
+		die "This should not happen " . pos($$self);
+	    }
+	}
+    }
+    
+    if (@_) {
+	# decode
+	my $len = length($_[0]);
+	$$self = "";
+	while (pos($_[0]) < $len) {
+	    if ($_[0] =~ /\G([^+]+)/gc) {
+		$self->append(latin1($1));
+	    } elsif ($_[0] =~ /\G\+-/gc) {
+		$$self .= "\0+";
+	    } elsif ($_[0] =~ /\G\+([A-Za-z0-9+\/]+)-?/gc) {
+		my $base64 = $1;
+		my $pad = length($base64) % 4;
+		$base64 .= "=" x (4 - $pad) if $pad;
+		require MIME::Base64;
+		$$self .= MIME::Base64::decode($base64);
+		if ((length($$self) % 2) != 0) {
+		    warn "Uneven UTF7 data";
+		    chop($$self); # correct it
+		}
+            } elsif ($_[0] =~ /\G\+/gc) {
+		warn "Bad UTF7 data escape";
+		$$self .= "\0+";
+	    } else {
+		die "This should not happen " . pos($_[0]);
+	    }
+	}
+    }
+    $old;
 }
 
 
@@ -286,7 +366,7 @@ sub hex
 	return $u;
     }
     my $old;
-    if (defined $$self) {
+    if (defined($$self) && defined wantarray) {
 	$old = unpack("H*", $$self);
 	$old =~ s/(....)/U+$1 /g;
 	$old =~ s/\s+$//;
@@ -294,6 +374,8 @@ sub hex
     if (@_) {
 	my $new = shift;
 	$new =~ tr/0-9A-Fa-f//cd;  # leave only hex chars
+	croak("Hex string length must be multiple of four")
+	    unless (length($new) % 4) == 0;
 	$$self = pack("H*", $new);
     }
     $old;
@@ -357,6 +439,18 @@ sub ord
 }
 
 
+sub name
+{
+    my $self = shift;
+    require Unicode::CharName;
+    if (wantarray) {
+	return map { Unicode::CharName::uname($_) } $self->ord;
+    } else {
+        return Unicode::CharName::uname(scalar($self->ord));
+    }
+}
+
+
 sub uchr
 {
     my($self,$val) = @_;
@@ -381,14 +475,25 @@ sub uchr
 
 sub substr
 {
-    my($self, $offset, $length) = @_;
+    my($self, $offset, $length, $substitute) = @_;
     $offset ||= 0;
     $offset *= 2;
     my $substr;
-    if (defined $length) {
-	$substr = substr($$self, $offset, $length*2);
+    if (defined $substitute) {
+	unless (UNIVERSAL::isa($substitute, 'Unicode::String')) {
+	    $substitute = Unicode::String->new($substitute);
+	}
+	if (defined $length) {
+	    $substr = substr($$self, $offset, $length*2) = $$substitute;
+	} else {
+	    $substr = substr($$self, $offset) = $$substitute;
+	}
     } else {
-	$substr = substr($$self, $offset);
+	if (defined $length) {
+	    $substr = substr($$self, $offset, $length*2);
+	} else {
+	    $substr = substr($$self, $offset);
+	}
     }
     bless \$substr, ref($self);
 }
@@ -413,4 +518,106 @@ sub rindex
     die "NYI";
 }
 
+sub chop
+{
+    my $self = shift;
+    if (length $$self) {
+	my $chop = chop($$self);
+	$chop = chop($$self) . $chop;
+	return bless \$chop, ref($self);
+    }
+    undef;
+}
+
+# Ideas to be implemented
+sub scan;
+sub reverse;
+
+sub lc;
+sub lcfirst;
+sub uc;
+sub ucfirst;
+
+sub split;
+sub sprintf;
+sub study;
+sub tr;
+
+
 1;
+
+__END__
+
+=head1 NAME
+
+Unicode::String - String of Unicode characters (UCS2/UTF16)
+
+=head1 SYNOPSIS
+
+ use Unicode::String qw(utf8 latin1 utf16);
+ $u = utf8("The Unicode Standard is a fixed-width, uniform ");
+ $u .= utf8("encoding scheme for written characters and text");
+
+ # convert to various external formats
+ print $u->ucs4;      # 4 byte characters
+ print $u->utf16;     # 2 byte characters + surrogates
+ print $u->utf8;      # 1-4 byte characters
+ print $u->utf7;      # 7-bit clean format
+ print $u->latin1;    # lossy
+ print $u->hex;       # a hexadecimal string
+
+ # all these can be used to set string value or as constructor
+ $u->latin1("Å være eller å ikke være");
+ $u = utf16("\0Å\0 \0v\0æ\0r\0e");
+
+ # string operations
+ $u2 = $u->copy;
+ $u->append($u2);
+ $u->repeat(2);
+ $u->chop;
+
+ $u->length;
+ $u->index($other);
+ $u->index($other, $pos);
+
+ $u->substr($offset);
+ $u->substr($offset, $length);
+ $u->substr($offset, $length, $substitute);
+
+ # overloading
+ $u .= "more";
+ $u = $u x 100;
+ print "$u\n";
+
+ # string <--> array of numbers
+ @array = $u->unpack;
+ $u->pack(@array);
+
+ # misc
+ $u->ord;
+ $u = uchr($num);
+
+=head1 DESCRIPTION
+
+A I<Unicode::String> object represents a sequence of Unicode
+characters.  The Unicode Standard is a fixed-width, uniform encoding
+scheme for written charaters and text.  This encoding treats
+alphabetic characters, ideographic characters, and symbols
+identically, which means that they can be used in any mixture and with
+equal facility.  Unicode is modeled on the ASCII character set, but
+uses a 16-bit encoding to support full multilingual text.
+
+Internally a I<Unicode::String> object is a string of 2 byte values in
+network byte order (big-endian).  The class provide various methods to
+convert from and to various external formats (ucs4 / utf16 / utf8 /
+utf7 / latin1 / hex).  All string manipulations are made on strings in
+this the internal 16-bit format.
+
+=head1 COPYRIGHT
+
+Copyright 1997 Gisle Aas.
+
+This library is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself.
+
+=cut

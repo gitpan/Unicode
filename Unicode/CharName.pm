@@ -2,10 +2,51 @@ package Unicode::CharName;
 
 # Copyright (c) 1997, Gisle Aas.
 
+=head1 NAME
+
+Unicode::CharName - Look up Unicode character names
+
+=head1 SYNOPSIS
+
+ use Unicode::CharName qw(uname ublock);
+ print uname(ord('%')), "\n";
+ print ublock(0x0300), "\n";
+
+=head1 DESCRIPTION
+
+This module provide a two functions named uname() and ublock().  The
+uname() function will return the Unicode character name for the given
+code (a number between 0 and 0x10FFFF).  Unicode character names are
+written in upper-case ASCII letters, and are strings like:
+
+  LATIN CAPITAL LETTER A
+  LATIN SMALL LETTER A WITH RING ABOVE
+  CJK UNIFIED IDEOGRAPH 7C80
+  HANGUL SYLLABLE PWILH
+
+The ublock() will return the name of the Unicode
+character block that the given character belongs to.
+
+=head1 SEE ALSO
+
+L<Unicode::String>
+
+=head1 COPYRIGHT
+
+Copyright 1997 Gisle Aas.
+
+This library is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself.
+
+Name table extracted from the Unicode 2.0 Character
+Database. Copyright (c) 1991-1996 Unicode, Inc. All Rights reserved.
+
+=cut
+
 require Exporter;
 @ISA=qw(Exporter);
 @EXPORT_OK = qw(uname ublock);
-$VERSION = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
 
 use strict;
 use vars qw(%JAMO_SHORT_NAME %NAMES @BLOCKS);

@@ -45,7 +45,11 @@ latin1(self,...)
 	    while (len--) {
 	        U16 us = ntohs(*usp++);
                 if (us > 255) {
-                    warn("Data outside latin1 range (pos=%d, ch=U+%x)", s - beg, us);
+		    if (us == 0xFEFF) {
+			/* ignore BYTE ORDER MARK */
+                    } else {
+			warn("Data outside latin1 range (pos=%d, ch=U+%x)", s - beg, us);
+		    }
 		} else {
 	            *s++ = us;
                 }
@@ -130,7 +134,7 @@ ucs4(self,...)
 	    SvPOK_on(str);
             SvCUR_set(str, 0);
 	    while (len--) {
-                U32 uc = ntohl(*from++);
+                U32 uc = ntohl(*from++);  /* XXX should look for swapped FEFF */
 		if (uc > 0xFFFF) {
 		    if (uc > 0x10FFFF) {
 			/* can't be represented */

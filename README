@@ -9,33 +9,53 @@ Current modules are:
   Unicode::CharName - look up character names
 
 
-Some of my plans for the Unicode modules are:
+Some of ideas to investigate for the Unicode modules are:
 
-   - Internal representation should be 2-byte-big-endian in normal
-     perl strings.  Blessed scalars as 'Unicode::String'.
+   o Fast encoding/decoding to various 8-bit char sets.  Mapping
+     table objects perhaps?
 
-   - Unicode version 2.0 based.
+   o Fast convertion to other large char sets (east-asien).  I don't
+     know anything about this.
 
-   - Fast XS implementation of Unicode encodings (UTF-7/UTF-8/UTF-16/UCS4)
-     Fast encoding/decoding to 8-bit char sets.
+   o Composition/decomposition support:
+     $u->decomp;  # will decomposite as much as possible:  "å"  --> "a°"
+     $u->comp;    # will composite as much as possible:    "a°" --> "å"
 
-   - Composition/decomposition support
+     Need separate routines or a special argument to distinguish
+     between compatibility decomposition and canonical decomposition.
+     The last one is a subset of the first one.
 
-   - Case convertions (lc, uc, ucfirst)  last one should use title-case
-   
-   - Fast lookup of Unicode attributes (unidata lookup using XS)
+   o General Unicode string to number convertion (based on unidata
+     number attributes)
 
-   - Unicode filehandles (automatic convertion from UTF-7/UTF-8/8-bit 
+   o Case convertions (lc, uc, ucfirst)  last one should use title-case
+
+   o Fast lookup of Unicode attributes (unidata lookup using XS)
+     $u->isletter, $u->isupper, $u->islower,....  why do we need them when
+     perl does not need them for normal text??
+
+   o There might be some support for the private area (i.e. adding case
+     convertion and char properties to chars within the area).
+
+   o Unicode tr-function, sprintf-function
+
+   o Unicode string comparison functions: cmp(), le, eq,...
+
+   o Unicode regular expressions: m// s/// split(//,..)
+
+   o Unicode filehandles (automatic convertion from UTF-7/UTF-8/8-bit 
      char set when reading,writing to filehandles)
 
 
-The following are examples of use:
+The following are examples of use of the current modules:
 
    use Unicode::String qw(latin1 utf8);
 
    $u = utf8("this is a string\n");
+   print $u->ucs4;
    print $u->utf16;
    print $u->utf8;
+   print $u->utf7;
    print $u->latin1;
    print $u->hex;
 
